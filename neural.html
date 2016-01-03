@@ -8,8 +8,105 @@
     </head>
     <body>
         <div id="main">
+            <h1>neural.html</h1>
+            <h2>a neural network that lives in a single HTML page</h2>
         </div>
         <script>
+            "use strict";
+            var ActivationFunctions,
+                Layer,
+                NeuralNetwork;
+
+            // Object that stores different activation functions
+            ActivationFunctions = {
+                sigmoid: function(x) {
+                    return 1 / (1 + Math.pow(Math.E, -x));
+                },
+                relu: function(x) {
+                    return Math.max(0, x);
+                }
+            }
+
+            // Object that encapsulates a single Layer of the neural network
+            Layer = {
+                // Initializes the layer with random values
+                init: function(inputSize, outputSize) {
+                    var i,
+                        j;
+
+                    this.inputSize = inputSize; // i
+                    this.outputSize = outputSize; // j
+
+                    // init W_j,i matrix with random values
+                    this.w = [];
+                    for (j = 0; j < outputSize; j++) {
+                        this.w[j] = [];
+                        for (i = 0; i < inputSize; i++) {
+                            this.w[j][i] = Math.random();
+                        }
+                    }
+
+                    // init b_j to zero
+                    this.b = [];
+                    for (j = 0; j < outputSize; j++) {
+                        this.b[j] = 0;
+                    }
+
+                    // set activation function to Sigmoid as default
+                    this.setActivationFunction(ActivationFunctions.sigmoid);
+                },
+
+                // Sets an activation function
+                setActivationFunction: function(phi) {
+                    this.phi = phi;
+                },
+
+                // Calculate intermediate values (x-tilde)
+                calculateIntermediates: function(input) {
+                    var i,
+                        j;
+                    this.intermediates = [];
+                    for (j = 0; j < outputSize; j++) {
+                        this.intermediates[j] = 0;
+                        for (i = 0; i < inputSize; i++) {
+                            this.intermediates[j] += this.w[j][i] * input[i];
+                        }
+                    }
+                    return this.intermediates;
+                },
+
+                // Forward propagation
+                forward: function(input) {
+                    var j,
+                        intermediates = this.calculateIntermediates(input);
+                    this.output = [];
+                    for (j = 0; j < outputSize; j++) {
+                        this.output[j] = this.phi(intermediates[j] + this.b[j]);
+                    }
+                    return this.output;
+                },
+
+                // Back propagation
+                back: function(v) {
+                    // TODO
+                }
+            }
+
+            NeuralNetwork = {
+                init: function() {
+                    console.log('Test');
+                }
+            };
+
+            // Test
+            var l1 = Object.create(Layer);
+            l1.init(3, 4);
+            console.log(l1);
+
+            var l2 = Object.create(Layer);
+            l2.init(5, 6);
+            console.log(l2);
+            console.log(l1);
         </script>
     </body>
 </html>
