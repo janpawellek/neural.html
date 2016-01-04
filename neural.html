@@ -20,8 +20,8 @@
 
             // Object that stores some helper functions
             HelperFunctions = {
-                // transposes b and calculates the inner product of the two vectors a and b
-                transposeAndInnerProduct: function(a, b) {
+                // calculates the outer product ab^T for two vectors a and b
+                outerProduct: function(a, b) {
                     var n,
                         p,
                         result = new Array(a.length);
@@ -29,6 +29,20 @@
                         result[n] = new Array(b.length);
                         for (p = 0; p < b.length; p++) {
                             result[n][p] = a[n] * b[p];
+                        }
+                    }
+                    return result;
+                },
+
+                // calculates the inner product a^Tb for a matrix a and a vector b
+                innerProduct: function(a, b) {
+                    var n,
+                        p,
+                        result = new Array(a[0].length);
+                    for (n = 0; n < a[0].length; n++) {
+                        result[n] = 0;
+                        for (p = 0; p < b.length; p++) {
+                            result[n] += a[p][n] * b[p];
                         }
                     }
                     return result;
@@ -100,13 +114,23 @@
                     var i,
                         j,
                         intermediates = [];
-                    for (j = 0; j < outputSize; j++) {
+
+                    if (input.length !== this.inputSize) {
+                        throw new Error('Expected input of size ' + this.inputSize + ', got input of size ' + input.length + '.');
+                    }
+
+                    for (j = 0; j < this.outputSize; j++) {
                         intermediates[j] = 0;
-                        for (i = 0; i < inputSize; i++) {
+                        for (i = 0; i < this.inputSize; i++) {
                             intermediates[j] += this.w[j][i] * input[i];
                         }
                         intermediates[j] += this.b[j];
                     }
+
+                    // store input and intermediates
+                    this.input = input;
+                    this.intermediates = intermediates;
+
                     return intermediates;
                 },
 
@@ -115,28 +139,38 @@
                     var j,
                         intermediates = this.calculateIntermediates(input),
                         output = [];
-                    for (j = 0; j < outputSize; j++) {
+                    for (j = 0; j < this.outputSize; j++) {
                         output[j] = this.phi.calc(intermediates[j]);
                     }
                     return output;
                 },
 
                 // Back propagation
-                back: function(v, input) {
+                back: function(v) {
                     var j,
-                        intermediates = this.calculateIntermediates(input),
+                        intermediates = this.intermediates,
                         phiv = [];
 
+                    if (v.length !== this.outputSize) {
+                        throw new Error('Expected error vector of size ' + this.outputSize + ', got size ' + v.length + '.');
+                    }
+                    if (!this.input) {
+                        throw new Error('Please run the forward propagation first.');
+                    }
+
                     // 0. Calculate the Hadamard product of phi' and v ("phiv")
-                    for (j = 0; j < outputSize; j++) {
+                    for (j = 0; j < this.outputSize; j++) {
                         phiv[j] = this.phi.derivative(intermediates[j]) * v[j];
                     }
 
                     // 1. Calculate dW
-                    this.dW = HelperFunctions.transposeAndInnerProduct(phiv, input);
+                    this.dW = HelperFunctions.outerProduct(phiv, this.input);
 
                     // 2. Calculate db
                     this.db = phiv;
+
+                    // Propagate error
+                    return HelperFunctions.innerProduct(this.w, phiv);
                 },
 
                 // Parameter update
@@ -199,20 +233,68 @@
             };
 
             NeuralNetwork = {
+                // Set up a new neural network.
+                // Specify the sizes of the layers as arguments to this function.
+                // The first argument is the size of the input.
+                // e.g.: nn.init(1, 2, 1)
                 init: function() {
-                    console.log('Test');
+                    var k;
+
+                    if (arguments.length < 2) {
+                        throw new Error('You need to specify at least the input size and the size of one layer.');
+                    }
+
+                    this.layers = new Array(arguments.length - 1);
+                    for (k = 1; k < arguments.length; k++) {
+                        this.layers[k-1] = Object.create(Layer);
+                        this.layers[k-1].init(arguments[k-1], arguments[k]);
+                    }
+
+                    console.log('Initialized a neural network with ' + (k-1) + ' layers:');
+                    console.log(this.layers);
+                },
+
+                // Forward propagation
+                forward: function(input) {
+                    var k,
+                        outputs = [];
+
+                    if (!this.layers) {
+                        throw new Error('You need to initialize the neural network first.');
+                    }
+                    console.log('Forward propagation')
+
+                    for (k = 0; k < this.layers.length; k++) {
+                        outputs[k] = this.layers[k].forward(k === 0 ? input : outputs[k-1]);
+                        console.log('Output of layer k=' + k + ':');
+                        console.log(outputs[k]);
+                    }
+                    return outputs[k];
+                },
+
+                // Back propagation
+                back: function(error) {
+                    var k,
+                        errors = [];
+
+                    if (!this.layers) {
+                        throw new Error('You need to initialize the neural network first.');
+                    }
+                    console.log('Back propagation');
+
+                    for (k = this.layers.length-1; k >= 0; k--) {
+                        errors[k] = this.layers[k].back(k === (this.layers.length-1) ? error : errors[k+1]);
+                        console.log('Error of layer k=' + k + ':');
+                        console.log(errors[k]);
+                    }
                 }
             };
 
             // Test
-            var l1 = Object.create(Layer);
-            l1.init(3, 4);
-            console.log(l1);
-
-            var l2 = Object.create(Layer);
-            l2.init(5, 6);
-            console.log(l2);
-            console.log(l1);
+            var nn = Object.create(NeuralNetwork);
+            nn.init(1, 2, 3, 1);
+            nn.forward([1]);
+            nn.back([0.5]);
         </script>
     </body>
 </html>
