@@ -13,19 +13,53 @@
         </div>
         <script>
             "use strict";
-            var ActivationFunctions,
+            var HelperFunctions,
+                ActivationFunctions,
                 Layer,
                 NeuralNetwork;
 
+            // Object that stores some helper functions
+            HelperFunctions = {
+                // transposes b and calculates the inner product of the two vectors a and b
+                transposeAndInnerProduct: function(a, b) {
+                    var n,
+                        p,
+                        result = new Array(a.length);
+                    for (n = 0; n < a.length; n++) {
+                        result[n] = new Array(b.length);
+                        for (p = 0; p < b.length; p++) {
+                            result[n][p] = a[n] * b[p];
+                        }
+                    }
+                    return result;
+                }
+            };
+
             // Object that stores different activation functions
             ActivationFunctions = {
-                sigmoid: function(x) {
-                    return 1 / (1 + Math.pow(Math.E, -x));
+                sigmoid: {
+                    calc: function(x) {
+                        return 1 / (1 + Math.pow(Math.E, -x));
+                    },
+                    derivative: function(x) {
+                        var t = ActivationFunctions.sigmoid.calc(x);
+                        return t * (1-t);
+                    }
                 },
-                relu: function(x) {
-                    return Math.max(0, x);
+                relu: {
+                    calc: function(x) {
+                        return Math.max(0, x);
+                    },
+                    derivative: function(x) {
+                        if (x >= 0) {
+                            return 1;
+                        }
+                        else {
+                            return 0;
+                        }
+                    }
                 }
-            }
+            };
 
             // Object that encapsulates a single Layer of the neural network
             Layer = {
@@ -64,33 +98,105 @@
                 // Calculate intermediate values (x-tilde)
                 calculateIntermediates: function(input) {
                     var i,
-                        j;
-                    this.intermediates = [];
+                        j,
+                        intermediates = [];
                     for (j = 0; j < outputSize; j++) {
-                        this.intermediates[j] = 0;
+                        intermediates[j] = 0;
                         for (i = 0; i < inputSize; i++) {
-                            this.intermediates[j] += this.w[j][i] * input[i];
+                            intermediates[j] += this.w[j][i] * input[i];
                         }
+                        intermediates[j] += this.b[j];
                     }
-                    return this.intermediates;
+                    return intermediates;
                 },
 
                 // Forward propagation
                 forward: function(input) {
                     var j,
-                        intermediates = this.calculateIntermediates(input);
-                    this.output = [];
+                        intermediates = this.calculateIntermediates(input),
+                        output = [];
                     for (j = 0; j < outputSize; j++) {
-                        this.output[j] = this.phi(intermediates[j] + this.b[j]);
+                        output[j] = this.phi.calc(intermediates[j]);
                     }
-                    return this.output;
+                    return output;
                 },
 
                 // Back propagation
-                back: function(v) {
-                    // TODO
+                back: function(v, input) {
+                    var j,
+                        intermediates = this.calculateIntermediates(input),
+                        phiv = [];
+
+                    // 0. Calculate the Hadamard product of phi' and v ("phiv")
+                    for (j = 0; j < outputSize; j++) {
+                        phiv[j] = this.phi.derivative(intermediates[j]) * v[j];
+                    }
+
+                    // 1. Calculate dW
+                    this.dW = HelperFunctions.transposeAndInnerProduct(phiv, input);
+
+                    // 2. Calculate db
+                    this.db = phiv;
+                },
+
+                // Parameter update
+                update: function(tau) {
+                    var i,
+                        j,
+                        wnew,
+                        bnew;
+
+                    this.backup = {}
+                    this.backup.w = this.w;
+                    this.backup.b = this.b;
+
+                    wnew = new Array(this.outputSize);
+                    for (j = 0; j < this.outputSize; j++) {
+                        wnew[j] = new Array(this.inputSize);
+                        for (i = 0; i < this.inputSize; i++) {
+                            wnew[j][i] = this.w[j][i] - (tau * this.dW[j][i]);
+                        }
+                    }
+                    this.w = wnew;
+
+                    bnew = new Array(this.outputSize);
+                    for (j = 0; j < this.outputSize; j++) {
+                        bnew[j] = this.b[j] - (tau * this.db[j]);
+                    }
+                    this.b = bnew;
+                },
+
+                // Parameter update undo
+                undo: function() {
+                    this.w = this.backup.w;
+                    this.b = this.backup.b;
+                },
+
+                // Perform regularization of dW
+                regularization: function(l, lambda) {
+                    var i,
+                        j,
+                        regularizationTerm;
+
+                    regularizationTerm = function(x) {
+                        // L1 regularization
+                        if (l === 1) {
+                            return x;
+                        }
+                        // L2 regularization
+                        if (l === 2) {
+                            return 1 / Math.sqrt(Math.pow(x, 2) + 0.0001);
+                        }
+                        throw new Error('Only L1 and L2 regularization is implemented.')
+                    };
+
+                    for (j = 0; j < this.outputSize; j++) {
+                        for (i = 0; i < this.inputSize; i++) {
+                            this.dW[j][i] += lambda * regularizationTerm(this.w[j][i]);
+                        }
+                    }
                 }
-            }
+            };
 
             NeuralNetwork = {
                 init: function() {
