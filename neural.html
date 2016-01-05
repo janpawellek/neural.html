@@ -9,8 +9,19 @@
     <body>
         <div id="main">
             <h1>neural.html</h1>
-            <h2>a neural network that lives in a single HTML page</h2>
+            <h2>A Neural Network that lives in a single HTML page.</h2>
+            <p>
+                Please inspect the source code of this page. You will find a neural network implementation in JavaScript
+                and some examples to be run as JavaScript commands, e.g. in the JavaScript console.
+            </p>
+            <p>
+                Furthermore here are some interactive examples:
+            </p>
+            <h3>Learning a cosine function</h3>
+            <canvas id="cosine-chart" style="width: 100%; height: 300px;"></canvas>
         </div>
+
+        <!-- Main code for a Neural Network in JavaScript -->
         <script>
             "use strict";
             var HelperFunctions,
@@ -442,12 +453,57 @@
                     for (i = 0; i < 10; i += 0.1) {
                         samples[i] = [[i], [Math.cos(i)]];
                     }
-                    nn.init(1, 10, 1);
+                    nn.init(1, 2, 3, 1);
                     nn.learning(N, samples, lambda, tau, mu);
                     return nn;
                 }
             ];
-            Tests[3]();
+            // run tests like this:
+            // Tests[3]();
+        </script>
+
+        <!-- This is only needed for the interactive chart examples: -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js"></script>
+
+        <!-- Cosine example -->
+        <script>
+            var nn = Tests[3]();
+            var labels = [];
+            var cosineData = [];
+            var nnData = [];
+            for (var i = 0; i < 20; i++) {
+                labels[i] = i;
+                cosineData[i] = Math.cos(i);
+                nnData[i] = nn.forward([i])[0];
+            }
+            var chart = new Chart(document.getElementById('cosine-chart').getContext('2d'));
+            var data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: "Cosine function",
+                        fillColor: "rgba(220,220,220,0.2)",
+                        strokeColor: "rgba(220,220,220,1)",
+                        pointColor: "rgba(220,220,220,1)",
+                        pointStrokeColor: "#fff",
+                        pointHighlightFill: "#fff",
+                        pointHighlightStroke: "rgba(220,220,220,1)",
+                        data: cosineData
+                    },
+                    {
+                        label: "NN output",
+                        fillColor: "rgba(151,187,205,0.2)",
+                        strokeColor: "rgba(151,187,205,1)",
+                        pointColor: "rgba(151,187,205,1)",
+                        pointStrokeColor: "#fff",
+                        pointHighlightFill: "#fff",
+                        pointHighlightStroke: "rgba(151,187,205,1)",
+                        data: nnData
+                    }
+                ]
+            };
+            chart.Line(data, {animation: false});
+
         </script>
     </body>
 </html>
