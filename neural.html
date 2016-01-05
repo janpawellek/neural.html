@@ -16,7 +16,8 @@
             var HelperFunctions,
                 ActivationFunctions,
                 Layer,
-                NeuralNetwork;
+                NeuralNetwork,
+                Tests;
 
             // Object that stores some helper functions
             HelperFunctions = {
@@ -100,8 +101,8 @@
                         this.b[j] = 0;
                     }
 
-                    // set activation function to Sigmoid as default
-                    this.setActivationFunction(ActivationFunctions.sigmoid);
+                    // set default activation function
+                    this.setActivationFunction(ActivationFunctions.relu);
                 },
 
                 // Sets an activation function
@@ -180,10 +181,6 @@
                         wnew,
                         bnew;
 
-                    this.backup = {}
-                    this.backup.w = this.w;
-                    this.backup.b = this.b;
-
                     wnew = new Array(this.outputSize);
                     for (j = 0; j < this.outputSize; j++) {
                         wnew[j] = new Array(this.inputSize);
@@ -200,10 +197,19 @@
                     this.b = bnew;
                 },
 
+                // Backup parameters
+                // Note: This only saves references. It works for the update() function
+                // which creates new arrays but won't prevent you from changing the existing arrays.
+                backup: function() {
+                    this.backupData = {};
+                    this.backupData.w = this.w;
+                    this.backupData.b = this.b;
+                },
+
                 // Parameter update undo
                 undo: function() {
-                    this.w = this.backup.w;
-                    this.b = this.backup.b;
+                    this.w = this.backupData.w;
+                    this.b = this.backupData.b;
                 },
 
                 // Perform regularization of dW
@@ -254,6 +260,17 @@
                     console.log(this.layers);
                 },
 
+                // Sets an activation function for every layer
+                setActivationFunction: function(phi) {
+                    if (!this.layers) {
+                        throw new Error('You need to initialize the neural network first.');
+                    }
+
+                    this.layers.forEach(function(layer) {
+                        layer.setActivationFunction(phi);
+                    });
+                },
+
                 // Forward propagation
                 forward: function(input) {
                     var k,
@@ -262,14 +279,15 @@
                     if (!this.layers) {
                         throw new Error('You need to initialize the neural network first.');
                     }
-                    console.log('Forward propagation')
+                    console.log('Forward propagation');
+                    console.log('Input: ' + input);
 
                     for (k = 0; k < this.layers.length; k++) {
                         outputs[k] = this.layers[k].forward(k === 0 ? input : outputs[k-1]);
                         console.log('Output of layer k=' + k + ':');
                         console.log(outputs[k]);
                     }
-                    return outputs[k];
+                    return outputs[outputs.length-1];
                 },
 
                 // Back propagation
@@ -287,14 +305,149 @@
                         console.log('Error of layer k=' + k + ':');
                         console.log(errors[k]);
                     }
+                },
+
+                // Performs learning using a stochastic gradient approach
+                // N: number of iterations
+                // samples: training samples as an array of tuples
+                // lambda: regularization parameter (>= 0)
+                // tau: rate for parameter update
+                // mu: alignment parameter for tau (0 < mu < 1)
+                learning: function(N, samples, lambda, tau, mu) {
+                    var n,
+                        s,
+                        output,
+                        v,
+                        t,
+                        lastLoss = Number.POSITIVE_INFINITY,
+                        curLoss;
+
+                    if (!this.layers) {
+                        throw new Error('You need to initialize the neural network first.');
+                    }
+
+                    for (n = 0; n < N; n++) {
+                        console.info('Iteration ' + n);
+
+                        // Backup current parameters
+                        this.layers.forEach(function(layer) {
+                            layer.backup();
+                        });
+
+                        // Reset current loss
+                        curLoss = 0;
+
+                        // For each training sample
+                        for (s = 0; s < samples.length; s++) {
+                            // Forward propagation
+                            output = this.forward(samples[s][0]);
+
+                            // Calculate error and loss (quadratic loss)
+                            v = new Array(output.length);
+                            for (t = 0; t < output.length; t++) {
+                                v[t] = output[t] - samples[s][1];
+                                curLoss += (0.5 * Math.pow(v[t], 2));
+                            }
+
+                            // Back propagate error into network
+                            this.back(v);
+
+                            // Regularization
+                            this.layers.forEach(function(layer) {
+                                layer.regularization(2, lambda); // L2 regularization
+                            });
+
+                            // Parameter update
+                            this.layers.forEach(function(layer) {
+                                layer.update(tau);
+                            });
+                        }
+
+                        console.info('Loss: ' + curLoss);
+                        if (curLoss >= lastLoss) {
+                            // restore last parameters from backup
+                            this.layers.forEach(function(layer) {
+                                layer.undo();
+                            });
+
+                            // align tau
+                            tau *= mu;
+                            console.info('Aligned tau to ' + tau);
+                        }
+                        else {
+                            lastLoss = curLoss;
+                        }
+                    }
                 }
             };
 
-            // Test
-            var nn = Object.create(NeuralNetwork);
-            nn.init(1, 2, 3, 1);
-            nn.forward([1]);
-            nn.back([0.5]);
+            // Tests
+            Tests = [
+                // simple creation of a network, forward and backpropagation
+                function() {
+                    var nn = Object.create(NeuralNetwork);
+                    nn.init(1, 2, 3, 1);
+                    nn.forward([1]);
+                    nn.back([0.5]);
+                    return nn;
+                },
+
+                // a linear function (2x)
+                function() {
+                    var samples = [
+                        [[1], [2]],
+                        [[2], [4]],
+                        [[3], [6]],
+                        [[4], [8]],
+                        [[5], [10]]
+                    ];
+                    var nn = Object.create(NeuralNetwork),
+                        N = 10,
+                        lambda = 0.1,
+                        tau = 0.1,
+                        mu = 0.5;
+                    nn.init(1, 1);
+                    nn.learning(N, samples, lambda, tau, mu);
+                    return nn;
+                },
+
+                // XOR example
+                function() {
+                    var samples = [
+                        [[0, 0], [0]],
+                        [[0, 1], [1]],
+                        [[1, 0], [1]],
+                        [[1, 1], [0]]
+                    ];
+                    var nn = Object.create(NeuralNetwork),
+                        N = 10,
+                        lambda = 0.1,
+                        tau = 0.1,
+                        mu = 0.5;
+                    nn.init(2, 2, 1);
+                    nn.setActivationFunction(ActivationFunctions.sigmoid);
+                    nn.learning(N, samples, lambda, tau, mu);
+                    return nn;
+                },
+
+                // a Cosine function
+                function() {
+                    var nn = Object.create(NeuralNetwork),
+                        N = 10,
+                        lambda = 0.1,
+                        tau = 0.1,
+                        mu = 0.5,
+                        samples = [],
+                        i;
+                    for (i = 0; i < 10; i += 0.1) {
+                        samples[i] = [[i], [Math.cos(i)]];
+                    }
+                    nn.init(1, 10, 1);
+                    nn.learning(N, samples, lambda, tau, mu);
+                    return nn;
+                }
+            ];
+            Tests[3]();
         </script>
     </body>
 </html>
