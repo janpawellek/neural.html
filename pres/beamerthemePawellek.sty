@@ -1,0 +1,52 @@
+
+\DeclareOptionBeamer{compress}{\beamer@compresstrue}
+\ProcessOptionsBeamer
+
+\mode<presentation>
+
+%\useoutertheme[footline=authorinstitutetitle]{miniframes}
+\useoutertheme[subsection=false]{miniframes} % added
+\usecolortheme{whale}
+\usecolortheme{orchid}
+
+%\useinnertheme{rounded}
+\useinnertheme{rectangles}
+
+\setbeamertemplate{headline}
+{
+  \begin{beamercolorbox}[colsep=1.5pt]{lower separation line head}
+  \end{beamercolorbox}
+}
+
+\setbeamertemplate{footline}%{infolines theme} % abgeändert
+{
+\leavevmode%
+\hbox{%
+\begin{beamercolorbox}[wd=.25\paperwidth,ht=2.25ex,dp=1ex,left]{author in head/foot}%
+\usebeamerfont{date in head/foot}\hspace*{2ex}\insertshortdate{}%
+\end{beamercolorbox}%
+\begin{beamercolorbox}[wd=.25\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+\usebeamerfont{author in head/foot}\insertshortauthor%~~(\insertshortinstitute)
+\end{beamercolorbox}%
+\begin{beamercolorbox}[wd=.4\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+\usebeamerfont{author in head/foot}\insertshorttitle
+\end{beamercolorbox}%
+\begin{beamercolorbox}[wd=.1\paperwidth,ht=2.25ex,dp=1ex,right]{title in head/foot}%
+\insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
+\end{beamercolorbox}%
+%\begin{beamercolorbox}[wd=.3333333\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
+%\usebeamerfont{date in head/foot}\insertshortdate{}%\hspace*{2em}
+%\insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
+%\end{beamercolorbox}
+}%
+\vskip0pt
+}
+
+
+\beamertemplatenavigationsymbolsempty % versteckt Navigationsbar
+
+
+\setbeamerfont{block title}{size={}}
+
+\mode
+<all>

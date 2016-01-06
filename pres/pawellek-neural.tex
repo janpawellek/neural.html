@@ -1,0 +1,65 @@
+\documentclass[xcolor=dvipsnames]{beamer}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+
+\usepackage{xkeyval}
+%\usepackage{todonotes}
+%\presetkeys{todonotes}{inline}{}
+\usepackage{dsfont}
+\usepackage{verbatim}
+
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{fancybox}
+
+\usepackage{beamerthemesplit}
+\usetheme[compress]{Pawellek}
+\usecolortheme[named=Black]{structure}
+\setbeamercolor*{palette primary}{bg=White}
+\setbeamercolor*{palette secondary}{bg=White}
+\setbeamercolor*{palette tertiary}{bg=White}
+\setbeamercolor{frametitle}{fg=Black,bg=White}
+
+
+\title[neural.html]{neural.html}
+\subtitle{A Neural Network that lives in a single HTML page}
+\author[Jan Pawellek]{Jan Pawellek}
+\date{11.01.2016}
+\institute[Uni HD]{
+Ruprecht-Karls-Universität Heidelberg\\
+Institut für Informatik\\
+pawellek@stud.uni-heidelberg.de}
+
+%---------------------------------------%
+%---------- RECURRING OUTLINE ----------%
+% have this if you'd like a recurring outline
+\AtBeginSection[]  % "Beamer, do the following at the start of every section"
+{
+\begin{frame}<beamer>
+\frametitle{Outline} % make a frame titled "Outline"
+\tableofcontents[currentsection,hideallsubsections]  % show TOC and highlight current section
+\end{frame}
+}
+%----------------------------------------
+
+
+\begin{document}
+\frame[plain]{\titlepage}
+
+\frame{\frametitle{Outline}\tableofcontents[hideallsubsections]}
+
+\section{Implementation}
+
+\frame{
+  \frametitle{Test}
+  \begin{itemize}
+  \item Item 1
+  \item Item 2
+  \end{itemize}
+}
+
+\frame{
+  \resizebox{0.2\linewidth}{!}{Thank you!}
+}
+
+\end{document}
