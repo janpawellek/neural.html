@@ -290,13 +290,13 @@
                     if (!this.layers) {
                         throw new Error('You need to initialize the neural network first.');
                     }
-                    console.log('Forward propagation');
-                    console.log('Input: ' + input);
+                    // console.log('Forward propagation');
+                    // console.log('Input: ' + input);
 
                     for (k = 0; k < this.layers.length; k++) {
                         outputs[k] = this.layers[k].forward(k === 0 ? input : outputs[k-1]);
-                        console.log('Output of layer k=' + k + ':');
-                        console.log(outputs[k]);
+                        // console.log('Output of layer k=' + k + ':');
+                        // console.log(outputs[k]);
                     }
                     return outputs[outputs.length-1];
                 },
@@ -309,12 +309,12 @@
                     if (!this.layers) {
                         throw new Error('You need to initialize the neural network first.');
                     }
-                    console.log('Back propagation');
+                    // console.log('Back propagation');
 
                     for (k = this.layers.length-1; k >= 0; k--) {
                         errors[k] = this.layers[k].back(k === (this.layers.length-1) ? error : errors[k+1]);
-                        console.log('Error of layer k=' + k + ':');
-                        console.log(errors[k]);
+                        // console.log('Error of layer k=' + k + ':');
+                        // console.log(errors[k]);
                     }
                 },
 
@@ -356,8 +356,9 @@
                             // Calculate error and loss (quadratic loss)
                             v = new Array(output.length);
                             for (t = 0; t < output.length; t++) {
-                                v[t] = output[t] - samples[s][1];
+                                v[t] = output[t] - samples[s][1][t];
                                 curLoss += (0.5 * Math.pow(v[t], 2));
+                                // console.log('output: ' + output[t] + ' sample: ' + samples[s][1] + ' loss: ' + (0.5 * Math.pow(v[t], 2)));
                             }
 
                             // Back propagate error into network
@@ -383,7 +384,7 @@
 
                             // align tau
                             tau *= mu;
-                            console.info('Aligned tau to ' + tau);
+                            console.info('Undo. New tau: ' + tau);
                         }
                         else {
                             lastLoss = curLoss;
@@ -449,11 +450,13 @@
                         tau = 0.1,
                         mu = 0.5,
                         samples = [],
-                        i;
-                    for (i = 0; i < 10; i += 0.1) {
-                        samples[i] = [[i], [Math.cos(i)]];
+                        i,
+                        j;
+                    for (i = 0, j = 0; i < 10; i += 0.1, j++) {
+                        samples[j] = [[i], [0.5*(Math.cos(i)+1)]];
                     }
-                    nn.init(1, 2, 3, 1);
+                    nn.init(1, 20, 5, 1);
+                    nn.setActivationFunction(ActivationFunctions.sigmoid);
                     nn.learning(N, samples, lambda, tau, mu);
                     return nn;
                 }
@@ -473,7 +476,7 @@
             var nnData = [];
             for (var i = 0; i < 20; i++) {
                 labels[i] = i;
-                cosineData[i] = Math.cos(i);
+                cosineData[i] = 0.5*(Math.cos(i)+1);
                 nnData[i] = nn.forward([i])[0];
             }
             var chart = new Chart(document.getElementById('cosine-chart').getContext('2d'));
