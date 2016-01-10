@@ -65,6 +65,12 @@ nn.learning(N, samples, lambda, tau, mu);</textarea>
             <canvas id="ex2-output" style="width: 100%; height: 300px; display: none;"></canvas>
         </div>
 
+        <h3>Classification</h3>
+        <label for="ex3-file">Select a file:</label>
+        <input id="ex3-file" type="file" />
+        <canvas id="ex3-output" style="width: 100%; height: 300px; display: none;"></canvas>
+        <div id="ex3-result"></div>
+
         <!-- Main code for a Neural Network in JavaScript -->
         <script>
             "use strict";
@@ -539,6 +545,7 @@ nn.learning(N, samples, lambda, tau, mu);</textarea>
 
         <!-- This is only needed for the interactive chart examples: -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.js"></script>
+        <script src="https://dima117.github.io/Chart.Scatter/Chart.Scatter.min.js"></script>
 
         <!-- Cosine example -->
         <script>
@@ -582,6 +589,133 @@ nn.learning(N, samples, lambda, tau, mu);</textarea>
                 };
                 chart.Line(data, {animation: false});
             };
+        </script>
+
+        <!-- Classification example -->
+        <script>
+            var filesInput = document.getElementById("ex3-file");
+            filesInput.addEventListener("change", function(event) {
+                // Init Chart
+                document.getElementById('ex3-output').style.display = 'block';
+                var chart = new Chart(document.getElementById('ex3-output').getContext('2d'));
+                var data = [
+                    {
+                        pointColor: '#582BA2',
+                        data: [{ x: 0, y: 0 }]
+                    },
+                    {
+                        pointColor: '#E5533C',
+                        data: []
+                    },
+                    {
+                        pointColor: '#FFC91C',
+                        data: []
+                    },
+                    {
+                        pointColor: '#8EB027',
+                        data: []
+                    },
+                    {
+                        pointColor: '#094B35',
+                        data: []
+                    }
+                ];
+                var scatterChart = chart.Scatter(data, {animation: false, datasetStroke: false});
+                var samples = [];
+                var trainingset = [];
+                var trainingset_onehot = [];
+                var testset = [];
+
+                // Process files
+                var files = event.target.files; //FileList object
+                for (var i = 0; i < files.length; i++) {
+                    var file = files[i];
+                    var reader = new FileReader();
+                    reader.addEventListener("load", function(event) {
+                        var text = event.target.result;
+                        var numCategories = 0;
+
+                        // For each Line - Read samples
+                        var lines = text.split('\n');
+                        for (var line = 0; line < lines.length; line++) {
+                            var items = lines[line].split(' ');
+                            if (items.length !== 3)
+                                continue;
+                            var x1 = items[0],
+                                x2 = items[1],
+                                y = items[2];
+                            samples.push([[Number(x1), Number(x2)], [Number(y)]]);
+                            if (Number(y) > numCategories) numCategories = Number(y);
+                        }
+
+                        var toOneHot = function(x) {
+                            var result = [];
+                            for (var u = 0; u < numCategories; u++) result[u] = (u-1 === x) ? 1 : 0;
+                            return result;
+                        };
+
+                        // Split into training and test set
+                        var shuffled = samples.slice(0), i = samples.length, temp, index;
+                        while (i--) {
+                            index = Math.floor((i + 1) * Math.random());
+                            temp = shuffled[index];
+                            shuffled[index] = shuffled[i];
+                            shuffled[i] = temp;
+                        }
+                        trainingset = shuffled.slice(0, Math.floor(samples.length * 0.8));
+                        testset = shuffled.slice(Math.floor(samples.length * 0.8));
+
+                        // Draw training set
+                        for (var j = 0; j < trainingset.length; j++) {
+                            scatterChart.datasets[trainingset[j][1][0]-1].addPoint(trainingset[j][0][0], trainingset[j][0][1]);
+                            trainingset_onehot[j] = [trainingset[j][0], toOneHot(trainingset[j][1][0])];
+                        }
+                        scatterChart.update();
+
+                        // Now do the learning
+                        console.log(trainingset_onehot);
+                        var nn = Object.create(NeuralNetwork),
+                            N = 1000,
+                            lambda = 0.1,
+                            tau = 0.01,
+                            mu = 0.5;
+                        nn.init(2, 2, 2, numCategories);
+                        nn.setActivationFunction(ActivationFunctions.sigmoid);
+                        nn.learning(N, trainingset_onehot, lambda, tau, mu);
+
+                        // Draw test set
+                        var numCorrect = 0,
+                            numTotal = 0;
+                        for (var j = 0; j < testset.length; j++) {
+                            numTotal++;
+                            var test_x1 = testset[j][0][0];
+                            var test_x2 = testset[j][0][1];
+                            var test_y = testset[j][1][0];
+                            var nn_output = nn.forward([test_x1, test_x2]);
+                            var output_y = 0;
+                            var max_nn_output_val = Number.NEGATIVE_INFINITY;
+                            for (var oi = 0; oi < nn_output.length; oi++) {
+                                if (nn_output[oi] > max_nn_output_val) {
+                                    max_nn_output_val = nn_output[oi];
+                                    output_y = oi + 1;
+                                }
+                            }
+                            var correct = test_y === output_y;
+                            console.log('(' + test_x1 + ',' + test_x2 + ') true:' + test_y + ' output:' + nn_output + ' -> ' + output_y + (correct ? ' CORRECT!' : ''));
+                            if (correct) numCorrect++;
+                            scatterChart.datasets[output_y-1].addPoint(test_x1, test_x2, 2);
+                        }
+                        scatterChart.update();
+                        document.getElementById('ex3-result').innerHTML =
+                            'Small dots: Training set<br>' +
+                            'Bold dots: Test set with NN classification<br><br>' +
+                            '<b>Result</b>:<br>' +
+                            'Correct: ' + numCorrect + ' of ' + numTotal + '<br>' +
+                            'Accuracy: ' + (numCorrect/numTotal).toFixed(2);
+                    });
+                    reader.readAsText(file);
+                }
+            });
         </script>
     </body>
 </html>
