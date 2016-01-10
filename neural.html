@@ -66,8 +66,18 @@ nn.learning(N, samples, lambda, tau, mu);</textarea>
         </div>
 
         <h3>Classification</h3>
-        <label for="ex3-file">Select a file:</label>
-        <input id="ex3-file" type="file" />
+        <textarea id="ex3-textarea" style="width: 100%; height: 150px">
+var nn = Object.create(NeuralNetwork),
+    N = 1000,
+    lambda = 0.1,
+    tau = 0.01,
+    mu = 0.5,
+    softmax = true;
+nn.init(2, 2, 2, numCategories);
+nn.setActivationFunction(ActivationFunctions.sigmoid);
+nn.learning(N, trainingset_onehot, lambda, tau, mu);</textarea><br>
+        <label for="ex3-file">Select a file to start learning:</label>
+        <input id="ex3-file" type="file" /><br>
         <canvas id="ex3-output" style="width: 100%; height: 300px; display: none;"></canvas>
         <div id="ex3-result"></div>
 
@@ -378,6 +388,7 @@ nn.learning(N, samples, lambda, tau, mu);</textarea>
                     var n,
                         s,
                         output,
+                        psum,
                         v,
                         t,
                         lastLoss = Number.POSITIVE_INFINITY,
@@ -403,12 +414,27 @@ nn.learning(N, samples, lambda, tau, mu);</textarea>
                             // Forward propagation
                             output = this.forward(samples[s][0]);
 
-                            // Calculate error and loss (quadratic loss)
+                            // Calculate error and loss (quadratic loss or softmax)
+                            psum = 0;
+                            if (this.softmax) {
+                                for (t = 0; t < output.length; t++) {
+                                    psum += Math.exp(output[t]);
+                                }
+                            }
                             v = new Array(output.length);
                             for (t = 0; t < output.length; t++) {
-                                v[t] = output[t] - samples[s][1][t];
-                                curLoss += (0.5 * Math.pow(v[t], 2));
-                                // console.log('output: ' + output[t] + ' sample: ' + samples[s][1] + ' loss: ' + (0.5 * Math.pow(v[t], 2)));
+                                if (this.softmax) {
+                                    v[t] = Math.exp(output[t]) / psum;
+                                    if (samples[s][1][t] === 1) {
+                                        v[t] -= 1;
+                                    }
+                                    curLoss += Math.abs(v[t]);
+                                }
+                                else {
+                                    v[t] = output[t] - samples[s][1][t];
+                                    curLoss += (0.5 * Math.pow(v[t], 2));
+                                    // console.log('output: ' + output[t] + ' sample: ' + samples[s][1] + ' loss: ' + (0.5 * Math.pow(v[t], 2)));
+                                }
                             }
 
                             // Back propagate error into network
@@ -674,44 +700,83 @@ nn.learning(N, samples, lambda, tau, mu);</textarea>
 
                         // Now do the learning
                         console.log(trainingset_onehot);
-                        var nn = Object.create(NeuralNetwork),
-                            N = 1000,
-                            lambda = 0.1,
-                            tau = 0.01,
-                            mu = 0.5;
-                        nn.init(2, 2, 2, numCategories);
-                        nn.setActivationFunction(ActivationFunctions.sigmoid);
-                        nn.learning(N, trainingset_onehot, lambda, tau, mu);
+                        var LResult = {
+                            resultset: [],
+                            numCorrect: 0,
+                            numTotal: 0
+                        }
+                        var lresults = [];
+                        for (var li = 0; li < 5; li++) {
+                            /*var nn = Object.create(NeuralNetwork),
+                                N = 1000,
+                                lambda = 0.1,
+                                tau = 0.01,
+                                mu = 0.5,
+                                softmax = true;
+                            nn.init(2, 2, 2, numCategories);
+                            nn.setActivationFunction(ActivationFunctions.sigmoid);
+                            nn.learning(N, trainingset_onehot, lambda, tau, mu);*/
+                            eval(document.getElementById('ex3-textarea').value);
 
-                        // Draw test set
-                        var numCorrect = 0,
-                            numTotal = 0;
-                        for (var j = 0; j < testset.length; j++) {
-                            numTotal++;
-                            var test_x1 = testset[j][0][0];
-                            var test_x2 = testset[j][0][1];
-                            var test_y = testset[j][1][0];
-                            var nn_output = nn.forward([test_x1, test_x2]);
-                            var output_y = 0;
-                            var max_nn_output_val = Number.NEGATIVE_INFINITY;
-                            for (var oi = 0; oi < nn_output.length; oi++) {
-                                if (nn_output[oi] > max_nn_output_val) {
-                                    max_nn_output_val = nn_output[oi];
-                                    output_y = oi + 1;
+                            // Draw test set
+                            var numCorrect = 0,
+                                numTotal = 0,
+                                resultset = [];
+                            for (var j = 0; j < testset.length; j++) {
+                                numTotal++;
+                                var test_x1 = testset[j][0][0];
+                                var test_x2 = testset[j][0][1];
+                                var test_y = testset[j][1][0];
+                                var nn_output = nn.forward([test_x1, test_x2]);
+
+                                if (softmax) {
+                                    var psum = 0;
+                                    for (var oi = 0; oi < nn_output.length; oi++) {
+                                        psum += Math.exp(nn_output[oi]);
+                                    }
+                                    for (var oi = 0; oi < nn_output.length; oi++) {
+                                        nn_output[oi] = Math.exp(nn_output[oi]) / psum;
+                                    }
                                 }
+
+                                var output_y = 0;
+                                var max_nn_output_val = Number.NEGATIVE_INFINITY;
+                                for (var oi = 0; oi < nn_output.length; oi++) {
+                                    if (nn_output[oi] > max_nn_output_val) {
+                                        max_nn_output_val = nn_output[oi];
+                                        output_y = oi + 1;
+                                    }
+                                }
+                                var correct = test_y === output_y;
+                                console.log('(' + test_x1 + ',' + test_x2 + ') true:' + test_y + ' output:' + nn_output + ' -> ' + output_y + (correct ? ' CORRECT!' : ''));
+                                if (correct) numCorrect++;
+                                resultset.push([test_x1, test_x2, output_y-1]);
+                                //scatterChart.datasets[output_y-1].addPoint(test_x1, test_x2, 2);
                             }
-                            var correct = test_y === output_y;
-                            console.log('(' + test_x1 + ',' + test_x2 + ') true:' + test_y + ' output:' + nn_output + ' -> ' + output_y + (correct ? ' CORRECT!' : ''));
-                            if (correct) numCorrect++;
-                            scatterChart.datasets[output_y-1].addPoint(test_x1, test_x2, 2);
+                            lresult = Object.create(LResult);
+                            lresult.numCorrect = numCorrect;
+                            lresult.numTotal = numTotal;
+                            lresult.resultset = resultset;
+                            lresults.push(lresult);
+                        }
+                        var max_lresult, max_lresult_numCorrect = 0;
+                        for (var li = 0; li < lresults.length; li++) {
+                            if (lresults[li].numCorrect > max_lresult_numCorrect) {
+                                max_lresult = lresults[li];
+                                max_lresult_numCorrect = lresults[li].numCorrect;
+                            }
+                        }
+                        for (var rsi = 0; rsi < max_lresult.resultset.length; rsi++) {
+                            var curRes = max_lresult.resultset[rsi];
+                            scatterChart.datasets[curRes[2]].addPoint(curRes[0], curRes[1], 2);
                         }
                         scatterChart.update();
                         document.getElementById('ex3-result').innerHTML =
                             'Small dots: Training set<br>' +
                             'Bold dots: Test set with NN classification<br><br>' +
                             '<b>Result</b>:<br>' +
-                            'Correct: ' + numCorrect + ' of ' + numTotal + '<br>' +
-                            'Accuracy: ' + (numCorrect/numTotal).toFixed(2);
+                            'Correct: ' + max_lresult.numCorrect + ' of ' + max_lresult.numTotal + '<br>' +
+                            'Accuracy: ' + (max_lresult.numCorrect/max_lresult.numTotal).toFixed(2);
                     });
                     reader.readAsText(file);
                 }
